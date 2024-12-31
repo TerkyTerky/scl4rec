@@ -37,8 +37,8 @@ def parse_args():
     parser.add_argument('--dataset',       type=str, default="epinions")
     parser.add_argument('--num_workers',   type=int, default=0)
     parser.add_argument('--save_name', type=str, default='tem')
-    parser.add_argument('--checkpoint',    type=str, default="./Model/epinions/_tem_.pth")
-    parser.add_argument('--model_dir',     type=str, default="./Model/epinions/")
+    parser.add_argument('--checkpoint',    type=str, default="./Model/yelp/_tem_.pth")
+    parser.add_argument('--model_dir',     type=str, default="./Model/yelp/")
    
     # params for the denoiser
     parser.add_argument('--time_type', type=str, default='cat', help='cat or add')

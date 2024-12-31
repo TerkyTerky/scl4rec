@@ -56,6 +56,7 @@ class Coach:
         self.train_loss = []
         self.his_recall = []
         self.his_ndcg  = []
+        self.his_hr  = []
     def train(self):
         args = self.args
         self.save_history = True
@@ -79,19 +80,20 @@ class Coach:
                 self.epoch, time.time() - start_time, epoch_losses
             ), flush=True)
             if self.epoch%5==0:
-                recall, ndcg = self.test(self.testloader)
+                recall, ndcg, hr = self.test(self.testloader)
 
                 #Record the history of recall and ndcg
                 self.his_recall.append(recall)
                 self.his_ndcg.append(ndcg)
+                self.his_hr.append(hr)
                 cur_best = recall + ndcg > best_recall + best_ndcg
                 if cur_best:
                     best_recall, best_ndcg, best_epoch = recall, ndcg, self.epoch
                     wait = 0
                 else:
                     wait += 1
-                logger.info('+ epoch {} tested, elapsed {:.2f}s, Recall@{}: {:.4f}, NDCG@{}: {:.4f}'.format(
-                    self.epoch, time.time() - start_time, args.topk, recall, args.topk, ndcg))
+                logger.info('+ epoch {} tested, elapsed {:.2f}s, HR@{}: {:.4f}, Recall@{}: {:.4f}, NDCG@{}: {:.4f}'.format(
+                    self.epoch, time.time() - start_time, args.topk, hr, args.topk, recall, args.topk, ndcg))
                 if args.model_dir and cur_best:
                     desc = args.save_name
                     perf = '' # f'N/R_{ndcg:.4f}/{hr:.4f}'
@@ -172,7 +174,7 @@ class Coach:
 
     def calcRes(self, topLocs, tstLocs, batIds):
         assert topLocs.shape[0] == len(batIds)
-        allRecall = allNdcg = 0
+        allRecall = allNdcg = allHitRatio = 0
         recallBig = 0
         ndcgBig = 0
         for i in range(len(batIds)):
@@ -181,21 +183,25 @@ class Coach:
             tstNum = len(temTstLocs)
             maxDcg = np.sum([np.reciprocal(np.log2(loc + 2)) for loc in range(min(tstNum, args.topk))])
             recall = dcg = 0
+            hit_count = 0
             for val in temTstLocs:
                 if val in temTopLocs:
                     recall += 1
                     dcg += np.reciprocal(np.log2(temTopLocs.index(val) + 2))
+                    hit_count += 1
             recall = recall / tstNum
             ndcg = dcg / maxDcg
+            hit_ratio = hit_count / tstNum if tstNum > 0 else 0
             allRecall += recall
             allNdcg += ndcg
-        return allRecall, allNdcg
+            allHitRatio += hit_ratio 
+        return allRecall, allNdcg, allHitRatio
 
 
     def test(self,dataloader):
         self.SDNet.eval()
         self.GCNModel.eval()
-        Recall, NDCG = [0] * 2
+        Recall, NDCG, HR = [0] * 3
         num = dataloader.dataset.__len__()
        
         since = time.time()
@@ -216,15 +222,17 @@ class Coach:
                 user = user + user_predict
                 allPreds = t.mm(user, t.transpose(iEmbeds, 1, 0)) * (1 - trnMask) - trnMask * 1e8
                 _, topLocs = t.topk(allPreds, args.topk)
-                recall, ndcg = self.calcRes(topLocs.cpu().numpy(), dataloader.dataset.tstLocs, user_idx)
-                Recall+= recall
-                NDCG+=ndcg
+                recall, ndcg, hit_ratio = self.calcRes(topLocs.cpu().numpy(), dataloader.dataset.tstLocs, user_idx)
+                Recall += recall
+                NDCG += ndcg
+                HR += hit_ratio 
             time_elapsed = time.time() - since
             print('Testing complete in {:.4f}s'.format(
             time_elapsed ))
             Recall = Recall/num
             NDCG = NDCG/num
-        return Recall, NDCG
+            HR = HR/num
+        return Recall, NDCG, HR
 
  
 
@@ -233,6 +241,7 @@ class Coach:
         history['loss'] = self.train_loss
         history['Recall'] = self.his_recall
         history['NDCG'] = self.his_ndcg
+        history['HR'] = self.his_hr
         ModelName = "SDR"
         desc = args.save_name
         perf = ''  # f'N/R_{ndcg:.4f}/{hr:.4f}'
