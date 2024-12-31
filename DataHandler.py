@@ -5,7 +5,7 @@ import torch as t
 from utils import load_data, load_model, save_model, fix_random_seed_as
 import scipy.sparse as sp
 from scipy.sparse import csr_matrix, coo_matrix, dok_matrix
-from param import args
+from params import args
 import  pickle
 import torch, dgl
 

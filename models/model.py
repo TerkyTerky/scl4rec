@@ -166,7 +166,8 @@ class GCNModel(nn.Module):
 
         if perturbed:
             noise = torch.rand_like(ui_embeddings).cuda()
-            ui_embeddings += torch.sign(ui_embeddings) * F.normalize(noise, dim=-1) * self.eps
+            # ui_embeddings += torch.sign(ui_embeddings) * F.normalize(noise, dim=-1) * self.eps
+            ui_embeddings += torch.sign(ui_embeddings) * F.normalize(noise, dim=-1) * 0.2
 
         return ui_embeddings,uu_embeddings
 

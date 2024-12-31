@@ -8,15 +8,13 @@ def parse_args():
 
    #Configuration Arguments
     parser.add_argument('--cuda',   type=str, default='0')
-    parser.add_argument('--seed',   type=int, default=2023)
+    parser.add_argument('--seed',   type=int, default=886)
 
    #Model Arguments
     parser.add_argument('--n_hid',     type=int,   default=64)
     parser.add_argument('--n_layers',  type=int,   default=2)
     parser.add_argument('--s_layers', type=int, default=2)
     parser.add_argument('--weight', type=bool, default=True, help='Add linear weight or not')
-
-
 
     #Train Arguments
     parser.add_argument('--dropout', type=float, default=0)

@@ -3,15 +3,15 @@ import numpy as np
 import torch
 from torch import nn
 
-from param import args
-from DataHander import DataHandler
+from params import args
+from DataHandler import DataHandler
 from models.model import SDNet ,GCNModel
 
 from utils import load_model, save_model, fix_random_seed_as, InfoNCE
 from tqdm import tqdm
 
 from models import diffusion_process as dp
-from Utils.Utils import *
+from tools.Utils import *
 import logging
 import sys
 class Coach:
@@ -126,11 +126,12 @@ class Coach:
             neg_idx = neg_idx.long().cuda()
             uiEmbeds,uuEmbeds = self.GCNModel(self.uiGraph,self.uuGraph,True, perturbed=False)
             perturbed_ui_embeds, perturbed_uu_embeds = self.GCNModel(self.uiGraph, self.uuGraph, True, perturbed=True)
-            contrastive_loss_value = self.cl_rate * InfoNCE(uiEmbeds[user_idx], perturbed_ui_embeds[user_idx], self.temp)
 
 
             uEmbeds = uiEmbeds[:self.n_user]
             iEmbeds = uiEmbeds[self.n_user:]
+            perturbeduEmbeds = perturbed_ui_embeds[:self.n_user]
+            perturbeiEmbeds = perturbed_ui_embeds[self.n_user:]
             user = uEmbeds[user_idx]
             pos = iEmbeds[pos_idx]
             neg = iEmbeds[neg_idx]
@@ -141,12 +142,15 @@ class Coach:
             diffloss = uuelbo
             scoreDiff = pairPredict(user, pos, neg)
             bprLoss = - (scoreDiff).sigmoid().log().sum() / args.batch_size
+            # contrastive_loss_value = self.cl_rate * InfoNCE(uiEmbeds[user_idx], perturbed_ui_embeds[user_idx], self.temp)
+            contrastive_loss_value = 0.2 * InfoNCE(user, pos, perturbeiEmbeds[neg_idx])
+
             regLoss = ((torch.norm(user) ** 2 + torch.norm(pos) ** 2 + torch.norm(neg) ** 2) * args.reg)/args.batch_size
             loss = bprLoss + regLoss
             losses = [bprLoss.item(), regLoss.item()]
 
 
-            loss = diffloss+loss+contrastive_loss_value
+            loss = diffloss + loss + contrastive_loss_value
             losses.append(diffloss.item())
 
             self.optimizer1.zero_grad()

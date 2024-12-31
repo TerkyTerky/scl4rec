@@ -1,5 +1,2 @@
-python=3.8
-torch=1.12.1
-numpy=1.23.1
-scipy=1.9.1
-dgl=1.0.2+cu113
+numpy==1.23.1
+scipy==1.9.1
